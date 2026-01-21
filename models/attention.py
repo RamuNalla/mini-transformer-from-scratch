@@ -61,5 +61,73 @@ class ScaledDotProductAttention(nn.Module):
         return output, attention_weights
 
 
+class MultiHeadAttention(nn.Module):
+    """
+    Multi-Head Attention mechanism
+    
+    Instead of performing a single attention function with d_model-dimensional keys,
+    values and queries, we project them h times with different, learned linear projections.
+    
+    MultiHead(Q, K, V) = Concat(head_1, ..., head_h)W^O
+    where head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
+    
+    Args:
+        d_model: Model dimension
+        num_heads: Number of attention heads
+        dropout: Dropout rate
+    """
+
+    def __init__(self, d_model: int, num_heads: int, dropout: float = 0.2):
+
+        super(MultiHeadAttention, self).__init__()
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads     # Dimension per head
+        self.d_v = d_model // num_heads     # Value dimension per head
+
+        # Linear projections for Q, K, V
+        # Instead of h separate projections, we use single large projection
+        # and split into heads
+        self.W_Q = nn.Linear(d_model, d_model)
+        self.W_K = nn.Linear(d_model, d_model)
+        self.W_V = nn.Linear(d_model, d_model) 
+
+        # Output projection
+        self.W_O = nn.Linear(d_model, d_model)
+
+        # Scaled dot-product attention
+        self.attention = ScaledDotProductAttention(self.d_k, dropout)
+
+        self.dropout = nn.Dropout(dropout)
+
+    def split_heads(self, x: torch.Tensor) -> torch.Tensor:
+
+        """
+        Split tensor into multiple heads
+        
+        Args:
+            x: Input tensor (batch_size, seq_len, d_model)
+            
+        Returns:
+            Reshaped tensor (batch_size, num_heads, seq_len, d_k)
+        """
+
+        batch_size, seq_len, d_model = x.size()
+
+        # Reshape: (batch_size, seq_len, num_heads, d_k)
+        x = x.view(batch_size, seq_len, self.num_heads, self.d_k)
+
+        # Transpose: (batch_size, num_heads, seq_len, d_k)
+        x = x.transpose(1, 2)
+
+        return x
+    
+
+
+    
+
+
+
 
 
