@@ -46,6 +46,20 @@ class ScaledDotProductAttention(nn.Module):
         # QK^T: (batch_size, num_heads, seq_len, seq_len)
         scores = torch.matmul(Q, K.transpose(-2, -1)) / self.scale
 
+        # Apply mask (set masked positions to large negative value)
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+
+        # Apply softmax to get attention weights
+        attention_weights = F.softmax(scores, dim=-1)
+        attention_weights = self.dropout(attention_weights) 
+        # Randomly zeroes out some attention weights to prevent overfitting
+
+        # Apply attention weights to values
+        output = torch.matmul(attention_weights, V)
+
+        return output, attention_weights
+
 
 
 
