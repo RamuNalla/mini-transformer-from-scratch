@@ -100,6 +100,104 @@ class TransformerNER(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    def create_padding_mask(self, input_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Create padding mask for attention
+        Args:
+            input_ids: Input token IDs (batch_size, seq_len)
+        Returns:
+            mask: Attention mask (batch_size, 1, seq_len, seq_len)
+        """
+        # Create mask where padding tokens are 0, others are 1
+        # Shape: (batch_size, seq_len)
+        mask = (input_ids != self.pad_idx).float()
+        
+        # Expand for attention: (batch_size, 1, 1, seq_len)
+        mask = mask.unsqueeze(1).unsqueeze(2)
+        
+        # Expand to (batch_size, 1, seq_len, seq_len)
+        mask = mask.expand(-1, -1, input_ids.size(1), -1)
+        
+        return mask
+
+    def forward(
+        self, input_ids: torch.Tensor, 
+        attention_mask: torch.Tensor = None,
+        return_attention: bool = False
+    ):
+        """
+        Forward pass
+        
+        Args:
+            input_ids: Input token IDs (batch_size, seq_len)
+            attention_mask: Optional attention mask (batch_size, 1, seq_len, seq_len)
+            return_attention: Whether to return attention weights
+            
+        Returns:
+            logits: NER tag logits (batch_size, seq_len, num_labels)
+            attention_weights: (Optional) List of attention weights from each layer
+        """
+        # Create padding mask if not provided
+        if attention_mask is None:
+            attention_mask = self.create_padding_mask(input_ids)
+        
+        # Token embeddings
+        # (batch_size, seq_len) -> (batch_size, seq_len, d_model)
+        embeddings = self.token_embedding(input_ids)
+        
+        # Scale embeddings (as in the paper)
+        embeddings = embeddings * torch.sqrt(torch.tensor(self.d_model, dtype=torch.float32))
+        
+        # Add positional encoding
+        embeddings = self.positional_encoding(embeddings)
+        
+        # Apply dropout
+        embeddings = self.dropout(embeddings)
+        
+        # Pass through transformer encoder
+        encoder_output, attention_weights = self.encoder(embeddings, attention_mask)
+        
+        # Classification head
+        logits = self.classifier(encoder_output)
+        
+        if return_attention:
+            return logits, attention_weights
+        
+        return logits
+    
+
+    def predict(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None):
+        """
+        Predict NER tags
+        
+        Args:
+            input_ids: Input token IDs (batch_size, seq_len)
+            attention_mask: Optional attention mask
+            
+        Returns:
+            predictions: Predicted tag indices (batch_size, seq_len)
+        """
+        self.eval()
+        with torch.no_grad():
+            logits = self.forward(input_ids, attention_mask)
+            predictions = torch.argmax(logits, dim=-1)
+        
+        return predictions
+    
+    def get_config(self):
+        """Get model configuration"""
+        return {
+            'vocab_size': self.vocab_size,
+            'num_labels': self.num_labels,
+            'd_model': self.d_model,
+            'num_layers': self.encoder.num_layers,
+            'num_heads': config.NUM_HEADS,
+            'd_ff': config.D_FF,
+            'dropout': config.DROPOUT,
+        }
+    
+
+
 
 
 
