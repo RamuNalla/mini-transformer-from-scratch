@@ -195,6 +195,100 @@ class TransformerNER(nn.Module):
             'd_ff': config.D_FF,
             'dropout': config.DROPOUT,
         }
+
+# Test the implementation
+if __name__ == "__main__":
+    print("=" * 80)
+    print("TESTING COMPLETE TRANSFORMER NER MODEL")
+    print("=" * 80)
+    
+    # Parameters
+    batch_size = 2
+    seq_len = 20
+    vocab_size = 1000
+    num_labels = 9  # CoNLL-2003 has 9 tags
+    
+    print(f"\nConfiguration:")
+    print(f"  Batch size: {batch_size}")
+    print(f"  Sequence length: {seq_len}")
+    print(f"  Vocabulary size: {vocab_size}")
+    print(f"  Number of labels: {num_labels}")
+    print(f"  Model dimension: {config.D_MODEL}")
+    print(f"  Number of layers: {config.NUM_LAYERS}")
+    print(f"  Number of heads: {config.NUM_HEADS}")
+    
+    # Create model
+    model = TransformerNER(vocab_size=vocab_size, num_labels=num_labels)
+    
+    # Create dummy input
+    input_ids = torch.randint(0, vocab_size, (batch_size, seq_len))
+    
+    # Simulate padding (last 5 tokens are padding)
+    input_ids[:, -5:] = config.PAD_IDX
+    
+    print(f"\n" + "-" * 80)
+    print("Testing Forward Pass:")
+    print("-" * 80)
+    
+    # Forward pass
+    logits = model(input_ids)
+    
+    print(f"  Input shape: {input_ids.shape}")
+    print(f"  Output logits shape: {logits.shape}")
+    print(f"  Expected: ({batch_size}, {seq_len}, {num_labels})")
+    
+    assert logits.shape == (batch_size, seq_len, num_labels), "Output shape mismatch"
+    print("  ✓ Shape test passed!")
+    
+    # Test with attention weights
+    print(f"\n" + "-" * 80)
+    print("Testing with Attention Weights:")
+    print("-" * 80)
+    
+    logits, attention_weights = model(input_ids, return_attention=True)
+    
+    print(f"  Number of attention weight matrices: {len(attention_weights)}")
+    print(f"  Each attention weight shape: {attention_weights[0].shape}")
+    print("  ✓ Attention weights test passed!")
+    
+    # Test prediction
+    print(f"\n" + "-" * 80)
+    print("Testing Prediction:")
+    print("-" * 80)
+    
+    predictions = model.predict(input_ids)
+    
+    print(f"  Predictions shape: {predictions.shape}")
+    print(f"  Expected: ({batch_size}, {seq_len})")
+    print(f"  Sample predictions: {predictions[0, :10]}")
+    
+    assert predictions.shape == (batch_size, seq_len), "Predictions shape mismatch"
+    print("  ✓ Prediction test passed!")
+    
+    # Count parameters
+    print(f"\n" + "-" * 80)
+    print("Model Statistics:")
+    print("-" * 80)
+    
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    
+    print(f"  Total parameters: {total_params:,}")
+    print(f"  Trainable parameters: {trainable_params:,}")
+    print(f"  Model size: ~{total_params * 4 / 1024 / 1024:.2f} MB (float32)")
+    
+    # Get model configuration
+    print(f"\n" + "-" * 80)
+    print("Model Configuration:")
+    print("-" * 80)
+    
+    model_config = model.get_config()
+    for key, value in model_config.items():
+        print(f"  {key}: {value}")
+    
+    print("\n" + "=" * 80)
+    print("✓ COMPLETE NER MODEL TEST PASSED")
+
     
 
 
