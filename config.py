@@ -45,17 +45,17 @@ PAD_IDX = 0
 # Model Hyperparameters
 
 # Embedding dimensions
-D_MODEL = 256              # Model dimension (embedding size)
-VOCAB_SIZE = 30000         # Vocabulary size
+D_MODEL = 128              # Model dimension (embedding size)
+VOCAB_SIZE = 10000         # Vocabulary size
 
 # Transformer architecture
-NUM_LAYERS = 4             # Number of Transformer encoder layers
-NUM_HEADS = 8              # Number of attention heads
-D_FF = 1024                # Dimension of feed-forward network
+NUM_LAYERS = 2             # Number of Transformer encoder layers
+NUM_HEADS = 4              # Number of attention heads
+D_FF = 512                # Dimension of feed-forward network
 DROPOUT = 0.1              # Dropout rate
 
 # Positional encoding
-MAX_SEQ_LENGTH = 128       # Maximum sequence length
+MAX_SEQ_LENGTH = 64       # Maximum sequence length
 
 # Attention
 D_K = D_MODEL // NUM_HEADS  # Dimension per head (64 for 256/8)
@@ -67,10 +67,10 @@ D_V = D_MODEL // NUM_HEADS  # Value dimension per head
 # Training configureation
 
 # Training parameters
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 LEARNING_RATE = 5e-4
-NUM_EPOCHS = 20
-WARMUP_STEPS = 1000
+NUM_EPOCHS = 10
+WARMUP_STEPS = 500
 MAX_GRAD_NORM = 1.0        # Gradient clipping
 
 # Optimizer
@@ -85,20 +85,20 @@ LABEL_SMOOTHING = 0.1
 LR_SCHEDULE = "warmup_linear"  # Options: warmup_linear, constant
 
 # Early stopping
-EARLY_STOPPING_PATIENCE = 5
+EARLY_STOPPING_PATIENCE = 3
 
 
 
 # Device COnfiguration
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-NUM_WORKERS = 4 if torch.cuda.is_available() else 0
+NUM_WORKERS = 0 if torch.cuda.is_available() else 0
 
 
 # Logging and Checkpointing
 
-LOG_INTERVAL = 50          # Log every N steps
-EVAL_INTERVAL = 500        # Evaluate every N steps
+LOG_INTERVAL = 25          # Log every N steps
+EVAL_INTERVAL = 200        # Evaluate every N steps
 SAVE_INTERVAL = 1          # Save checkpoint every N epochs
 
 # Evaluation configuration
