@@ -171,3 +171,73 @@ def compute_entity_metrics(predictions: List[List[int]],
             }
     
     return entity_metrics
+
+def print_metrics_summary(metrics: Dict, entity_metrics: Dict = None):
+    """
+    Print a formatted summary of metrics
+    
+    Args:
+        metrics: Overall metrics dictionary
+        entity_metrics: Per-entity metrics dictionary
+    """
+    print("\n" + "=" * 80)
+    print("EVALUATION METRICS SUMMARY")
+    print("=" * 80)
+    
+    print("\nOverall Performance:")
+    print(f"  F1 Score:    {metrics['f1']:.4f}")
+    print(f"  Precision:   {metrics['precision']:.4f}")
+    print(f"  Recall:      {metrics['recall']:.4f}")
+    print(f"  Accuracy:    {metrics['accuracy']:.4f}")
+    
+    if entity_metrics:
+        print("\nPer-Entity Performance:")
+        print(f"  {'Entity':<10} {'F1':<8} {'Precision':<12} {'Recall':<8}")
+        print("  " + "-" * 45)
+        
+        for entity_type, scores in sorted(entity_metrics.items()):
+            print(f"  {entity_type:<10} {scores['f1']:<8.4f} "
+                  f"{scores['precision']:<12.4f} {scores['recall']:<8.4f}")
+    
+    print("=" * 80)
+
+
+# Test the metrics
+if __name__ == "__main__":
+    print("=" * 80)
+    print("TESTING NER METRICS")
+    print("=" * 80)
+    
+    # Create dummy predictions and labels
+    # Simulate predictions for 3 sentences
+    
+    # Example: "John works at Google in Paris"
+    # True: B-PER O O B-ORG O B-LOC
+    # Pred: B-PER O O B-ORG O B-LOC (perfect match)
+    
+    true_labels_1 = [1, 0, 0, 3, 0, 5]  # B-PER, O, O, B-ORG, O, B-LOC
+    pred_labels_1 = [1, 0, 0, 3, 0, 5]  # Perfect match
+    
+    # Example 2: Some errors
+    true_labels_2 = [1, 2, 0, 3, 4, 0, 5]  # B-PER, I-PER, O, B-ORG, I-ORG, O, B-LOC
+    pred_labels_2 = [1, 0, 0, 3, 4, 0, 5]  # Missed I-PER
+    
+    # Example 3: More errors
+    true_labels_3 = [0, 0, 3, 4, 0]  # O, O, B-ORG, I-ORG, O
+    pred_labels_3 = [0, 0, 5, 0, 0]  # Predicted LOC instead of ORG
+    
+    predictions = [pred_labels_1, pred_labels_2, pred_labels_3]
+    labels = [true_labels_1, true_labels_2, true_labels_3]
+    lengths = [len(p) for p in predictions]
+    
+    print("\nComputing metrics...")
+    metrics = compute_metrics(predictions, labels, lengths, verbose=True)
+    
+    print("\nComputing per-entity metrics...")
+    entity_metrics = compute_entity_metrics(predictions, labels, lengths)
+    
+    print_metrics_summary(metrics, entity_metrics)
+    
+    print("\n" + "=" * 80)
+    print("✓ METRICS TEST COMPLETE")
+    print("=" * 80)
