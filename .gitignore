@@ -1,1 +1,5 @@
 __pycache__
+data
+logs
+saved_models
+data/processed/vocab.pkl

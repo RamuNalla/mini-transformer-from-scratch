@@ -1,3 +1,8 @@
+"""
+Training script for Transformer NER model
+Complete training pipeline with validation and checkpointing
+"""
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,6 +18,7 @@ from models.ner_model import TransformerNER
 from utils.data_loader import prepare_data, create_dataloaders
 from utils.metrics import compute_metrics, print_metrics_summary, compute_entity_metrics
 
+
 class Trainer:
     """
     Trainer class for NER model
@@ -22,6 +28,7 @@ class Trainer:
                  word2idx, tag2idx, device):
         """
         Initialize trainer
+        
         Args:
             model: TransformerNER model
             train_loader: Training DataLoader
@@ -69,7 +76,7 @@ class Trainer:
         self.best_f1 = 0.0
         self.patience_counter = 0
         self.global_step = 0
-
+    
     def train_epoch(self, epoch: int) -> float:
         """
         Train for one epoch
@@ -193,7 +200,7 @@ class Trainer:
         )
         
         return avg_loss, metrics
-
+    
     def train(self):
         """
         Main training loop
@@ -279,7 +286,7 @@ class Trainer:
         print(f'✓ Best F1 score: {self.best_f1:.4f}')
         print(f'✓ Model saved to: {config.MODEL_SAVE_PATH}')
         print("=" * 80)
-
+    
     def test(self):
         """
         Evaluate on test set
@@ -288,8 +295,8 @@ class Trainer:
         print("EVALUATING ON TEST SET")
         print("=" * 80)
         
-        # Load best model
-        checkpoint = torch.load(config.MODEL_SAVE_PATH)
+        # Load best model - FIXED: Add weights_only=False for PyTorch 2.6+
+        checkpoint = torch.load(config.MODEL_SAVE_PATH, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         
         # Evaluate
@@ -336,7 +343,8 @@ class Trainer:
         print(f"\n✓ Results saved to {results_path}")
         
         return test_metrics, entity_metrics
-    
+
+
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(description='Train Transformer NER model')

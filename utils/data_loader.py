@@ -21,18 +21,20 @@ class NERDataset(Dataset):
     """PyTorch Dataset for NER"""
     
     def __init__(self, sentences: List[List[str]], labels: List[List[str]], 
-                 word2idx: Dict, tag2idx: Dict):
+                 word2idx: Dict, tag2idx: Dict, max_length: int = None):
         """
         Args:
             sentences: List of tokenized sentences
             labels: List of tag sequences
             word2idx: Word to index mapping
             tag2idx: Tag to index mapping
+            max_length: Maximum sequence length (truncate if longer)
         """
         self.sentences = sentences
         self.labels = labels
         self.word2idx = word2idx
         self.tag2idx = tag2idx
+        self.max_length = max_length if max_length else config.MAX_SEQ_LENGTH
     
     def __len__(self):
         return len(self.sentences)
@@ -40,6 +42,11 @@ class NERDataset(Dataset):
     def __getitem__(self, idx):
         sentence = self.sentences[idx]
         labels = self.labels[idx]
+        
+        # IMPORTANT: Truncate sequences that are too long
+        if len(sentence) > self.max_length:
+            sentence = sentence[:self.max_length]
+            labels = labels[:self.max_length]
         
         # Convert words to indices
         word_ids = [self.word2idx.get(word, self.word2idx[config.UNK_TOKEN]) 
@@ -157,21 +164,20 @@ def build_vocabulary(sentences: List[List[str]], max_vocab_size: int = config.VO
 
 def download_conll2003():
     """
-    Download CoNLL-2003 dataset
-    Note: Due to licensing, you might need to manually download from:
-    https://www.clips.uantwerpen.be/conll2003/ner/
+    Information about CoNLL-2003 dataset
     """
     print("=" * 80)
-    print("DOWNLOADING CoNLL-2003 DATASET")
+    print("CoNLL-2003 DATASET INFORMATION")
     print("=" * 80)
-    print("\nNote: Due to licensing restrictions, please manually download:")
-    print("  1. Visit: https://www.clips.uantwerpen.be/conll2003/ner/")
-    print("  2. Download train.txt, valid.txt, test.txt")
-    print(f"  3. Place them in: {config.RAW_DATA_DIR}")
-    print("\nOr use the datasets library:")
-    print("  pip install datasets")
-    print("  from datasets import load_dataset")
-    print("  dataset = load_dataset('conll2003')")
+    print("\nThis script automatically loads CoNLL-2003 from:")
+    print("  📦 Source: eriktks/conll2003 (Hugging Face mirror)")
+    print("  ✓ No authentication required")
+    print("  ✓ Official CoNLL-2003 data")
+    print("\nDataset Statistics:")
+    print("  - Training: ~14,000 sentences")
+    print("  - Validation: ~3,250 sentences")
+    print("  - Test: ~3,453 sentences")
+    print("  - Entity Types: PER, ORG, LOC, MISC")
     print("=" * 80)
 
 
@@ -219,7 +225,7 @@ def create_dummy_data():
 def prepare_data_from_huggingface():
     """
     Load and prepare CoNLL-2003 from Hugging Face datasets
-    This is easier than manual download
+    Includes multiple fallbacks for reliability
     """
     try:
         from datasets import load_dataset
@@ -232,49 +238,73 @@ def prepare_data_from_huggingface():
     print("LOADING CoNLL-2003 FROM HUGGING FACE")
     print("=" * 80)
     
-    # Load dataset - Use the correct dataset name
-    # Note: conll2003 requires authentication, using alternative
-    try:
-        dataset = load_dataset("conll2003", trust_remote_code=True)
-    except Exception as e:
-        print(f"Error loading conll2003: {e}")
-        print("\nTrying alternative dataset source...")
-        # Use alternative: WNUT-17 dataset (similar to CoNLL but freely available)
-        try:
-            dataset = load_dataset("wnut_17")
-            print("✓ Loaded WNUT-17 dataset (alternative to CoNLL-2003)")
-        except:
-            print("Failed to load dataset. Using dummy data for testing...")
-            return create_dummy_data()
+    dataset = None
     
+    # Attempt 1: Official CoNLL-2003
+    try:
+        print("Attempting to load 'conll2003'...")
+        dataset = load_dataset("conll2003", trust_remote_code=True)
+        print("✓ Successfully loaded official conll2003")
+    except Exception as e:
+        print(f"x Failed to load official conll2003: {e}")
+        
+        # Attempt 2: Community Mirror (eriktks/conll2003) - Often fixes 404 errors
+        try:
+            print("\nAttempting to load mirror 'eriktks/conll2003'...")
+            dataset = load_dataset("eriktks/conll2003", trust_remote_code=True)
+            print("✓ Successfully loaded mirror eriktks/conll2003")
+        except Exception as e2:
+            print(f"x Failed to load mirror: {e2}")
+            print("\nFalling back to dummy data...")
+            return create_dummy_data()
+
     # Extract sentences and labels
     def extract_data(split_data):
         sentences = []
         labels = []
         
+        print(f"Processing {len(split_data)} examples...")
+        
         for example in split_data:
-            tokens = [token.lower() for token in example['tokens']]
-            tags = [config.NER_TAGS[tag_id] for tag_id in example['ner_tags']]
-            
-            sentences.append(tokens)
-            labels.append(tags)
+            try:
+                # Standardize tokens
+                tokens = [str(token).lower() for token in example['tokens']]
+                
+                # Safely map tags
+                # config.NER_TAGS should match: ['O', 'B-PER', 'I-PER', 'B-ORG', 'I-ORG', 'B-LOC', 'I-LOC', 'B-MISC', 'I-MISC']
+                tags = []
+                for tag_id in example['ner_tags']:
+                    # Safety check: Ensure tag_id is within our config's range
+                    if 0 <= tag_id < len(config.NER_TAGS):
+                        tags.append(config.NER_TAGS[tag_id])
+                    else:
+                        # Map unknown tags to 'O'
+                        tags.append('O')
+                
+                sentences.append(tokens)
+                labels.append(tags)
+            except Exception as e:
+                # Skip malformed examples
+                continue
         
         return sentences, labels
     
-    train_sentences, train_labels = extract_data(dataset['train'])
-    val_sentences, val_labels = extract_data(dataset['validation'])
-    test_sentences, test_labels = extract_data(dataset['test'])
-    
-    print(f"✓ Train: {len(train_sentences):,} sentences")
-    print(f"✓ Validation: {len(val_sentences):,} sentences")
-    print(f"✓ Test: {len(test_sentences):,} sentences")
-    
-    return {
-        'train': (train_sentences, train_labels),
-        'val': (val_sentences, val_labels),
-        'test': (test_sentences, test_labels)
-    }
-
+    try:
+        train_sentences, train_labels = extract_data(dataset['train'])
+        val_sentences, val_labels = extract_data(dataset['validation'])
+        test_sentences, test_labels = extract_data(dataset['test'])
+        
+        print(f"✓ Train: {len(train_sentences):,} sentences")
+        print(f"✓ Validation: {len(val_sentences):,} sentences")
+        print(f"✓ Test: {len(test_sentences):,} sentences")
+        
+        return {
+            'train': (train_sentences, train_labels),
+            'val': (val_sentences, val_labels),
+            'test': (test_sentences, test_labels)
+        }
+    except Exception as e:
+        print(f"Error processing dataset: {e}")
 
 def prepare_data():
     """

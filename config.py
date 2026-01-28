@@ -55,7 +55,7 @@ D_FF = 512                # Dimension of feed-forward network
 DROPOUT = 0.1              # Dropout rate
 
 # Positional encoding
-MAX_SEQ_LENGTH = 64       # Maximum sequence length
+MAX_SEQ_LENGTH = 128       # Maximum sequence length
 
 # Attention
 D_K = D_MODEL // NUM_HEADS  # Dimension per head (64 for 256/8)
@@ -68,8 +68,8 @@ D_V = D_MODEL // NUM_HEADS  # Value dimension per head
 
 # Training parameters
 BATCH_SIZE = 16
-LEARNING_RATE = 5e-4
-NUM_EPOCHS = 10
+LEARNING_RATE = 1e-4
+NUM_EPOCHS = 30
 WARMUP_STEPS = 500
 MAX_GRAD_NORM = 1.0        # Gradient clipping
 
@@ -85,7 +85,7 @@ LABEL_SMOOTHING = 0.1
 LR_SCHEDULE = "warmup_linear"  # Options: warmup_linear, constant
 
 # Early stopping
-EARLY_STOPPING_PATIENCE = 3
+EARLY_STOPPING_PATIENCE = 10
 
 
 
